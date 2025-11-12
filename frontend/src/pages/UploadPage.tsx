@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { FileUpload } from '@/components/FileUpload';
@@ -16,6 +16,19 @@ import { walletManager } from '@/lib/wallet';
 import { uploadApi } from '@/lib/api';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 
+import { Transaction } from '@mysten/sui/transactions';
+import {
+	ConnectButton,
+	useCurrentAccount,
+	useSignTransaction,
+  useSignAndExecuteTransaction,
+  useSignPersonalMessage,
+	useSuiClient,
+} from '@mysten/dapp-kit';
+import { toBase64 } from '@mysten/sui/utils';
+import { walrus, WalrusFile, WalrusClient, WriteFilesFlow } from '@mysten/walrus';
+import type { SuiClient } from '@mysten/sui/client';
+
 export default function UploadPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,7 +45,7 @@ export default function UploadPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    baseModel: '',
+    baseModels: [],
     task: '',
     language: 'en',
     license: 'MIT',
@@ -40,6 +53,30 @@ export default function UploadPage() {
     price: 0,
   });
   const { toast } = useToast();
+
+
+  // const [client, setClient] = useState(new SuiJsonRpcClient({
+  //   url: getFullnodeUrl('testnet'),
+  //   // Setting network on your client is required for walrus to work correctly
+  //   network: 'testnet',
+  // }).$extend(
+  //   walrus({
+  //     packageConfig: {
+  //       systemObjectId: '0x98ebc47370603fe81d9e15491b2f1443d619d1dab720d586e429ed233e1255c1',
+  //       stakingPoolId: '0x20266a17b4f1a216727f3eef5772f8d486a9e3b5e319af80a5b75809c035561d',
+  //     },
+  //   }),
+  // ));
+
+  const { mutateAsync: signTransaction } = useSignTransaction();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { mutateAsync: signMessage } = useSignPersonalMessage();
+	const [signature, setSignature] = useState('');
+  const [signedTxBytes, setSignedTxBytes] = useState('');
+	const client = useSuiClient() as SuiClient & { walrus: WalrusClient };
+	const currentAccount = useCurrentAccount();
+  const [walrusFlow, setWalrusFlow] = useState<any>({})
+  // const flowRef = useRef<WriteFilesFlow | null>(null);
 
   // Handle parent adapter context (fork or new version)
   useEffect(() => {
@@ -60,7 +97,7 @@ export default function UploadPage() {
       setFormData({
         name: `${parent.name} (Fork)`,
         description: `Forked from ${parent.name}. ${parent.description}`,
-        baseModel: parent.baseModel,
+        baseModels: parent.baseModels,
         task: parent.task,
         language: parent.language,
         license: parent.license,
@@ -73,6 +110,74 @@ export default function UploadPage() {
       });
     }
   }, [location.state]);
+
+
+
+
+
+
+
+
+  // Step 1: Create and encode the flow (can be done immediately when file is selected)
+  async function handleEncode(params: {
+    identifier: string;
+    fileData: ArrayBuffer
+  }) {
+  
+    const flow = client.walrus.writeFilesFlow({
+    files: [
+        WalrusFile.from({
+          // contents: new Blob([new Uint8Array([1,2,3,4,5])], { type: 'application/octet-stream' }),
+          contents: new Blob([params.fileData]),
+          identifier: params.identifier // 'my-file.txt',
+        }),
+      ],
+    });
+
+    await flow.encode();
+    setWalrusFlow(flow);
+  }
+
+  // Step 2: Register the blob (triggered by user clicking a register button after the encode step)
+  async function handleRegister() {
+    const registerTx = walrusFlow.register({
+      epochs: 3,
+      owner: currentAccount.address,
+      deletable: true,
+    });
+    const { digest } = await signAndExecuteTransaction({ transaction: registerTx });
+    // Step 3: Upload the data to storage nodes
+    // This can be done immediately after the register step, or as a separate step the user initiates
+    const resp = await walrusFlow.upload({ digest });
+    console.log("File Uploaded Response:", resp)
+
+    return resp;
+  }
+
+  // Step 4: Certify the blob (triggered by user clicking a certify button after the blob is uploaded)
+  async function handleCertify() {
+    const certifyTx = walrusFlow.certify();
+
+    await signAndExecuteTransaction({ transaction: certifyTx });
+
+    // Step 5: Get the new files
+    const files = await walrusFlow.listFiles();
+    console.log('Uploaded files', files);
+  }
+
+  async function handleAllSignAndUpload() {
+    const resp = await handleRegister();
+    const files = await handleCertify();
+
+    return {
+      walrusCID: 'Test-CID',
+      uploadOutput: resp,
+      files
+    }
+  }
+
+
+
 
   // Handle file selection and validation
   const handleFileSelect = async (selectedFile: File) => {
@@ -101,7 +206,7 @@ export default function UploadPage() {
         setFormData({
           name: validation.manifest.name || '',
           description: validation.manifest.description || '',
-          baseModel: validation.manifest.baseModel || '',
+          baseModels: validation.manifest.base_models || [],
           task: validation.manifest.task || '',
           language: validation.manifest.language || 'en',
           license: validation.manifest.license || 'MIT',
@@ -114,6 +219,13 @@ export default function UploadPage() {
         title: 'Bundle validated',
         description: 'All required files found and validated successfully',
       });
+
+      // console.log(selectedFile)
+
+      // await handleEncode({
+      //   identifier: 'adapter.zip',
+      //   fileData: await selectedFile.arrayBuffer()
+      // });
     } catch (error) {
       console.error('Validation error:', error);
       toast({
@@ -121,6 +233,93 @@ export default function UploadPage() {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSignTransaction = useCallback(async () => {
+    if (!currentAccount) return;
+
+    try {
+      // 1. Construct the transaction block (example: transfer SUI)
+      const tx = new Transaction();
+      // Add a command to transfer 1000 MIST (0.000001 SUI) to the current account itself
+      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(1000)]);
+      tx.transferObjects([coin], tx.pure.address(currentAccount.address));
+      // Set the sender for the transaction
+      tx.setSender(currentAccount.address);
+
+      // 2. Sign the transaction using the hook
+      const result = await signTransaction({
+        transaction: tx,
+        chain: currentAccount.chains[0], // Use the current account's chain
+      });
+
+      // The result contains the signature and the serialized transaction bytes
+      setSignature(result.signature);
+      setSignedTxBytes(result.bytes);
+      console.log('Signed transaction bytes:', result.bytes);
+      console.log('Signature:', result.signature);
+
+      // Optional: Manually execute the transaction and report effects
+      // This is necessary if you use useSignTransaction instead of useSignAndExecuteTransaction
+      
+      const executeResult = await client.executeTransactionBlock({
+        transactionBlock: result.bytes,
+        signature: result.signature,
+        options: {
+            showEffects: true,
+            showRawEffects: true,
+        },
+      });
+      // After execution, you should report effects to the wallet
+      // result.reportTransactionEffects(executeResult.rawEffects); 
+      console.log('Execution result:', executeResult);
+
+      // 4. Convert the raw effects (Uint8Array) to a Base64 string 
+      if (executeResult.rawEffects) {
+        const rawEffectsBase64 = toBase64(Uint8Array.from(executeResult.rawEffects));
+        
+        console.log('Reporting Base64 effects to wallet:', rawEffectsBase64);
+        // Pass the Base64 string to the report function
+        result.reportTransactionEffects(rawEffectsBase64); 
+      } else {
+        // Handle cases where effects might not be available (e.g. status is not success)
+        console.warn('Transaction did not return raw effects. Effects not reported to wallet.');
+      }
+
+      alert('Transaction signed successfully! Check console for signature and bytes.');
+
+    } catch (error) {
+      console.error('Failed to sign transaction:', error);
+      alert('Failed to sign transaction. Check console for details.');
+    }
+  }, [currentAccount, signTransaction, client]);
+
+  const handleSignMessage = async (messageToSign: string) => {
+    if (!currentAccount) return;
+
+    try {
+      // 1. Encode the message string to bytes (Uint8Array)
+      const messageBytes = new TextEncoder().encode(messageToSign);
+
+      // 2. Call the signMessage function
+      const result = await signMessage({
+        message: messageBytes,
+      });
+
+      // The result contains the signature and the bytes/salt
+      setSignature(result.signature);
+      console.log('Signed message result:', result);
+      alert('Message signed successfully!');
+
+      // The result.bytes is the bytes that were actually signed by the wallet 
+      // (original message + intent prefix/salt).
+
+      return result.signature;
+
+    } catch (error) {
+      console.error('Failed to sign message:', error);
+      alert('Failed to sign message. Check console for details.');
     }
   };
 
@@ -135,7 +334,7 @@ export default function UploadPage() {
       return;
     }
 
-    if (!formData.name || !formData.description || !formData.baseModel || !formData.task) {
+    if (!formData.name || !formData.description || !formData.baseModels || !formData.task) {
       toast({ title: 'Please fill in all required fields', variant: 'destructive' });
       return;
     }
@@ -178,11 +377,11 @@ export default function UploadPage() {
         ...validation.manifest,
         name: formData.name,
         description: formData.description,
-        baseModel: formData.baseModel,
+        base_models: formData.baseModels,
         task: formData.task,
         language: formData.language,
         license: formData.license,
-        author: walletState.address!,
+        // author: walletState.address!,
         checksums: {
           adapter: adapterHash,
           config: configHash,
@@ -194,7 +393,7 @@ export default function UploadPage() {
 
       // Stage 3: Signing with wallet
       setProgress({ stage: 'signing', progress: 55, message: 'Requesting wallet signature...' });
-      const signature = await walletManager.signMessage(manifestHash);
+      const signature = await handleSignMessage(manifestHash); // await walletManager.signMessage(manifestHash);
       setProgress({ stage: 'signing', progress: 65, message: 'Signature obtained successfully' });
 
       // Stage 4: Uploading to Walrus
@@ -212,6 +411,10 @@ export default function UploadPage() {
           message: `Uploading: ${p.toFixed(1)}% (${speed.toFixed(2)} MB/s, ${remaining.toFixed(0)}s remaining)` 
         });
       });
+      // const { walrusCID, files, uploadOutput } = await handleAllSignAndUpload();
+      // console.log({
+      //   walrusCID, files, uploadOutput
+      // })
       
       setProgress({ stage: 'uploading', progress: 85, message: `Uploaded to Walrus: ${walrusCID}` });
 
@@ -319,8 +522,8 @@ export default function UploadPage() {
                     <Input
                       id="baseModel"
                       placeholder="llama-2-7b"
-                      value={formData.baseModel}
-                      onChange={(e) => setFormData({ ...formData, baseModel: e.target.value })}
+                      value={formData.baseModels}
+                      onChange={(e) => setFormData({ ...formData, baseModels: [e.target.value] })}
                     />
                   </div>
 

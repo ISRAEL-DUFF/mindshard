@@ -43,28 +43,77 @@ export const authApi = {
 export const uploadApi = {
   async getUploadUrl(): Promise<{ uploadUrl: string; adapterId: string }> {
     // TODO: Implement actual API call to get Walrus pre-signed URL
-    const response = await fetch(`${API_BASE}/upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!response.ok) throw new Error('Failed to get upload URL');
-    return response.json();
+    // const response = await fetch(`${API_BASE}/upload`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    // });
+    // if (!response.ok) throw new Error('Failed to get upload URL');
+    // return response.json();
+
+    return {
+      uploadUrl: 'http://localhost:3000/api/walrus/upload-blob',
+      adapterId: ''
+    }
   },
 
   async uploadToWalrus(uploadUrl: string, file: File, onProgress?: (progress: number) => void): Promise<string> {
-    // TODO: Implement Walrus upload with progress tracking
-    return new Promise((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        onProgress?.(progress);
-        if (progress >= 100) {
-          clearInterval(interval);
-          resolve('mock-walrus-cid-' + Date.now());
+    // Upload file (multipart/form-data) to the provided uploadUrl.
+    // Use XMLHttpRequest so we can report upload progress via onProgress.
+    return new Promise((resolve, reject) => {
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', uploadUrl, true);
+        xhr.responseType = 'json';
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const res = xhr.response as any;
+                // Common response keys that may contain the CID
+                const cid = res?.cid
+                  || res?.blob_id
+                  || res?.blobId
+                  || res?.data?.cid
+                  || res?.data?.blob_id
+                  || res?.newlyCreated?.blobObject?.blobId
+                  || res?.newlyCreated?.blobObject?.id; // fallback to object id
+                if (cid) return resolve(cid as string);
+                return resolve(JSON.stringify(res));
+          }
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+
+        if (xhr.upload && onProgress) {
+          xhr.upload.onprogress = (e: ProgressEvent) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              onProgress(percent);
+            }
+          };
         }
-      }, 200);
+
+        const form = new FormData();
+        form.append('file', file, file.name);
+
+        xhr.send(form);
+      } catch (err) {
+        reject(err);
+      }
     });
   },
+
+  // return new Promise((resolve) => {
+  //     let progress = 0;
+  //     const interval = setInterval(() => {
+  //       progress += 10;
+  //       onProgress?.(progress);
+  //       if (progress >= 100) {
+  //         clearInterval(interval);
+  //         resolve('mock-walrus-cid-' + Date.now());
+  //       }
+  //     }, 200);
+  //   });
 
   async mintAdapter(data: {
     name: string;

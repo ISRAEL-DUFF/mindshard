@@ -16,6 +16,8 @@ export class WalrusService {
   private readonly logger = new Logger(WalrusService.name);
   private relayUrl = process.env.WALRUS_RELAY_URL || '';
   private apiKey = process.env.WALRUS_API_KEY || '';
+  private publisherUrl = process.env.PUBLISHER || '';
+  private aggregatorUrl = process.env.AGGREGATOR || '';
 
   constructor() {}
 
@@ -47,7 +49,8 @@ export class WalrusService {
    */
   async uploadFileServerSide(filePath: string) {
     try {
-      const url = `${this.relayUrl}/v1/upload`;
+      // const url = `${this.relayUrl}/v1/upload`;
+      const url = `${this.publisherUrl}/v1/blobs`;
       const filename = path.basename(filePath);
       
       // Create form with proper stream metadata
@@ -85,12 +88,55 @@ export class WalrusService {
     }
   }
 
+  async uploadBlob({
+    blobId,
+    txId,
+    nonce,
+    filePath,
+    deletableBlobObject,
+    encodingType = 'RS2', // optional
+  }: {
+    blobId?: string;
+    txId?: string;
+    nonce?: string;
+    filePath: string;
+    deletableBlobObject?: string;
+    encodingType?: string;
+  }) {
+    // Build query params
+    const params = new URLSearchParams({
+      // blob_id: blobId,
+      // tx_id: txId,
+      // nonce,
+    });
+    if (deletableBlobObject) params.append('deletable_blob_object', deletableBlobObject);
+    if (encodingType) params.append('encoding_type', encodingType);
+
+    // Read file as binary
+    const fileStream = fs.createReadStream(filePath);
+
+    console.log(`${this.publisherUrl}/v1/blobs?${params.toString()}`)
+
+    // Send POST request
+    const response = await axios.put(
+      `${this.publisherUrl}/v1/blobs?${params.toString()}`,
+      fileStream,
+      {
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      },
+    );
+
+    return response.data; // Contains blob_id and confirmation_certificate
+  }
+
   /**
    * Query Walrus for blob metadata. Useful for verifying availability.
    */
   async getBlobInfo(cid: string) {
     try {
-      const url = `${this.relayUrl}/v1/blob/${cid}`;
+      const url = `${this.aggregatorUrl}/v1/blobs/${cid}`;
       const res = await axios.get(url);
       return res.data;
     } catch (e) {

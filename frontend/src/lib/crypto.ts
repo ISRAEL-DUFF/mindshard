@@ -43,6 +43,8 @@ export async function validateZipBundle(file: File): Promise<{
   try {
     const zip = new JSZip();
     const contents = await zip.loadAsync(file);
+
+    console.log(contents.files, contents.file('manifest.json'))
     
     // Check for required files
     const manifestFile = contents.file('manifest.json');
@@ -68,15 +70,18 @@ export async function validateZipBundle(file: File): Promise<{
     let manifest: AdapterManifest;
     try {
       manifest = JSON.parse(manifestText);
+      console.log("Manifest:", manifest)
     } catch (e) {
       errors.push('Invalid manifest.json format');
       return { isValid: false, errors };
     }
     
     // Validate manifest structure
-    const requiredFields = ['name', 'version', 'description', 'baseModel', 'task', 'license', 'author'];
+    // const requiredFields = ['name', 'version', 'description', 'base_models', 'task', 'license', 'author'];
+    const requiredFields = ['name', 'version', 'description', 'base_models', 'license', 'authors'];
     for (const field of requiredFields) {
       if (!manifest[field as keyof AdapterManifest]) {
+        console.log("Field:", field, manifest[field as keyof AdapterManifest])
         errors.push(`Missing required field in manifest: ${field}`);
       }
     }

@@ -109,7 +109,7 @@ export class WalletManager {
       // Convert MIST to SUI (1 SUI = 10^9 MIST)
       const suiBalance = Number(mistBalance) / (10 ** 9);
 
-      console.log(`Account Balance: ${suiBalance} SUI`);
+      // console.log(`Account Balance: ${suiBalance} SUI`);
       return suiBalance;
 
     } catch (error) {

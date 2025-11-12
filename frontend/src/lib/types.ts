@@ -38,11 +38,14 @@ export interface AdapterManifest {
   name: string;
   version: string;
   description: string;
-  baseModel: string;
+  base_models: string[];
   task: string;
   language: string;
   license: string;
-  author: string;
+  authors: {
+    name: string,
+    sui_address: string
+  }[],
   files: {
     adapter: string;
     config: string;

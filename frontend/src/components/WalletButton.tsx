@@ -25,8 +25,6 @@ export function WalletButton() {
   const currentAccount = useCurrentAccount();
 	const [open, setOpen] = useState(false);
 
-  console.log(currentAccount, account, open)
-
   const { toast } = useToast();
 
   useEffect(() => {

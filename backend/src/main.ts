@@ -8,6 +8,16 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // For hackathon/demo mode allow all origins to simplify testing from any host.
+  // This intentionally sets origin: true which mirrors the request origin.
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+  });
+
+  console.log('CORS enabled for all origins (hackathon mode)');
 
   // Global validation
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
@@ -35,6 +45,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`MindShard backend listening on ${port}`);
+
+  console.log(process.env.DB_NAME)
 }
 
 bootstrap();

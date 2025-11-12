@@ -1,5 +1,10 @@
 import { defineConfig } from '@mikro-orm/postgresql';
 import { Adapter } from './src/modules/adapters/adapter.entity';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+console.log(process.env.DB_NAME)
 
 export default defineConfig({
   entities: ['./dist/**/*.entity.js'],

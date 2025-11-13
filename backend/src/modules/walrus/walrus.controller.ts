@@ -112,7 +112,7 @@ export class WalrusController {
     // Persist adapter record in simple store and optionally create on-chain PTB for client to sign
     const adapter = await this.adapters.create({
       name: manifest.name || 'untitled',
-      cid,
+      walrusCID: cid,
       manifestHash: manifest_hash,
       uploaderAddress: uploader_address,
       license: license || manifest.license || 'unknown'

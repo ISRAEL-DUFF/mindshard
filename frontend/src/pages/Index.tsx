@@ -12,54 +12,54 @@ export default function Index() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-glow opacity-50" />
-        <div className="container mx-auto px-4 py-24 relative">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+        <div className="container mx-auto px-4 py-12 sm:py-24 relative">
+          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
             <div className="inline-block">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel mb-6">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel mb-4 sm:mb-6">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Decentralized LoRA Registry</span>
+                <span className="text-xs sm:text-sm font-medium">Decentralized LoRA Registry</span>
               </div>
             </div>
 
-            <h1 className="text-6xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight px-4">
               Share & Discover
               <br />
               <span className="gradient-text">AI Model Adapters</span>
             </h1>
 
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
               A decentralized marketplace for LoRA fine-tuning adapters. Powered by Sui blockchain
               and Walrus storage for verifiable, immutable AI model components.
             </p>
 
-            <div className="flex items-center justify-center gap-4">
-              <Link to="/search">
-                <Button size="lg" className="bg-gradient-primary text-lg px-8">
-                  <Search className="mr-2 h-5 w-5" />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
+              <Link to="/search" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-primary text-base sm:text-lg px-6 sm:px-8">
+                  <Search className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Explore Adapters
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              <Link to="/upload">
-                <Button size="lg" variant="outline" className="text-lg px-8">
-                  <Upload className="mr-2 h-5 w-5" />
+              <Link to="/upload" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8">
+                  <Upload className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Upload Adapter
                 </Button>
               </Link>
             </div>
 
-            <div className="grid grid-cols-3 gap-8 pt-12">
+            <div className="grid grid-cols-3 gap-4 sm:gap-8 pt-8 sm:pt-12">
               <div className="text-center">
-                <div className="text-4xl font-bold gradient-text">1,234</div>
-                <div className="text-sm text-muted-foreground mt-1">Adapters</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">1,234</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1">Adapters</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold gradient-text">567</div>
-                <div className="text-sm text-muted-foreground mt-1">Creators</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">567</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1">Creators</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold gradient-text">8,901</div>
-                <div className="text-sm text-muted-foreground mt-1">Downloads</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">8,901</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-1">Downloads</div>
               </div>
             </div>
           </div>
@@ -67,10 +67,10 @@ export default function Index() {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-24">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Why MindShard?</h2>
-          <p className="text-xl text-muted-foreground">
+      <section className="container mx-auto px-4 py-12 sm:py-24">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why MindShard?</h2>
+          <p className="text-lg sm:text-xl text-muted-foreground">
             Built for the decentralized AI future
           </p>
         </div>
@@ -127,23 +127,23 @@ export default function Index() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-24">
-        <div className="glass-panel rounded-2xl p-12 text-center relative overflow-hidden">
+      <section className="container mx-auto px-4 py-12 sm:py-24">
+        <div className="glass-panel rounded-2xl p-6 sm:p-12 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-primary opacity-10" />
-          <div className="relative space-y-6">
-            <h2 className="text-4xl font-bold">Ready to get started?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <div className="relative space-y-4 sm:space-y-6">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">Ready to get started?</h2>
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Join the decentralized AI revolution. Upload your first adapter or explore
               the marketplace.
             </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link to="/upload">
-                <Button size="lg" className="bg-gradient-primary">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <Link to="/upload" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-primary">
                   Upload Adapter
                 </Button>
               </Link>
-              <Link to="/search">
-                <Button size="lg" variant="outline">
+              <Link to="/search" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
                   Browse Marketplace
                 </Button>
               </Link>

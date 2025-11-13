@@ -42,9 +42,10 @@ public entry fun publish_adapter(
     cid: vector<u8>,
     manifest_hash: vector<u8>,
     license: vector<u8>,
+    uploader: address,
     ctx: &mut TxContext
 ) {
-    let uploader = tx_context::sender(ctx);
+    // let uploader = tx_context::sender(ctx);
     let adapter = Adapter {
         id: object::new(ctx),
         uploader,

@@ -1,18 +1,6 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req } from '@nestjs/common';
 import { SuiService } from './sui.service';
-
-class VerifyManifestDto {
-  manifestJson!: string;
-  signature!: string;
-  expectedAddress!: string;
-}
-
-class PreparePublishDto {
-  cid!: string;
-  manifestHash!: string;
-  license!: string;
-}
-
+import { MintAdapterDto, PreparePublishDto, VerifyManifestDto } from './dto';
 @Controller('sui')
 export class SuiController {
   constructor(private readonly service: SuiService) { }
@@ -37,9 +25,17 @@ export class SuiController {
   }
 
   @Post('mint')
-  async mintAdapter(@Body() body: PreparePublishDto) {
-    const { cid, manifestHash, license } = body;
-    const res = await this.service.mintAdapterServerSide(cid, manifestHash, license);
+  async mintAdapter(@Body() body: MintAdapterDto) {
+    const {walrusCID, manifest, manifestHash, signature, messageBytesBase64, uploaderAddress, name} = body;
+    const license = manifest.license;
+    const res = await this.service.mintAdapterResource({
+      cid: walrusCID,
+      manifestHash,
+      license,
+      signature,
+      messageBytesBase64,
+      uploaderAddress
+    });
     return res;
   }
 }

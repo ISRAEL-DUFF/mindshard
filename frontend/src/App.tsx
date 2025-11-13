@@ -10,6 +10,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AdminPage from "./pages/AdminPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import BundleCreatorPage from "./pages/BundleCreatorPage";
 
 const App = () => (
   <TooltipProvider>
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/search" element={<SearchPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/adapter/:id" element={<AdapterDetailPage />} />
+          <Route path="/create-bundle" element={<BundleCreatorPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/auth" element={<AuthPage />} />

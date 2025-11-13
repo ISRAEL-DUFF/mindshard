@@ -1,11 +1,11 @@
 import { IsString, IsOptional } from 'class-validator';
 
-export class CreateAdapterDto {
+export class CreateAdapterDto { 
   @IsString()
   name: string;
 
   @IsString()
-  cid: string;
+  walrusCID: string;
 
   @IsString()
   uploaderAddress: string;

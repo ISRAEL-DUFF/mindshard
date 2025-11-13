@@ -310,12 +310,18 @@ export default function UploadPage() {
       // The result contains the signature and the bytes/salt
       setSignature(result.signature);
       console.log('Signed message result:', result);
-      alert('Message signed successfully!');
+      toast({
+        title: 'Message signed!',
+        description: `'Message signed successfully!'`,
+      });
 
       // The result.bytes is the bytes that were actually signed by the wallet 
       // (original message + intent prefix/salt).
 
-      return result.signature;
+      return {
+        signature: result.signature,
+        txBytes: result.bytes
+      };
 
     } catch (error) {
       console.error('Failed to sign message:', error);
@@ -393,7 +399,7 @@ export default function UploadPage() {
 
       // Stage 3: Signing with wallet
       setProgress({ stage: 'signing', progress: 55, message: 'Requesting wallet signature...' });
-      const signature = await handleSignMessage(manifestHash); // await walletManager.signMessage(manifestHash);
+      const signResponse = await handleSignMessage(manifestHash); // await walletManager.signMessage(manifestHash);
       setProgress({ stage: 'signing', progress: 65, message: 'Signature obtained successfully' });
 
       // Stage 4: Uploading to Walrus
@@ -424,7 +430,9 @@ export default function UploadPage() {
         name: formData.name,
         manifestHash,
         walrusCID,
-        signature,
+        signature: signResponse.signature,
+        uploaderAddress: currentAccount.address,
+        messageBytesBase64: signResponse.txBytes,
         manifest,
       });
       

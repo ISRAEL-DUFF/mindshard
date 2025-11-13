@@ -120,16 +120,58 @@ export const uploadApi = {
     manifestHash: string;
     walrusCID: string;
     signature: string;
+    messageBytesBase64: string;
+    uploaderAddress: string;
     manifest: AdapterManifest;
   }): Promise<{ adapterId: string; txHash: string }> {
+    const adapterPayload = {
+      name: data.name,
+      manifestHash: data.manifestHash,
+      walrusCID: data.walrusCID,
+      signature: data.signature,
+      messageBytesBase64: data.messageBytesBase64,
+      uploaderAddress: data.uploaderAddress
+    }
+    const adapterMintPayload = {
+      name: data.name,
+      manifestHash: data.manifestHash,
+      walrusCID: data.walrusCID,
+      signature: data.signature,
+      messageBytesBase64: data.messageBytesBase64,
+      manifest: data.manifest,
+      uploaderAddress: data.uploaderAddress
+    };
+    console.log("PAYLOAD:", {
+      data,
+      adapterMintPayload,
+      adapterPayload
+    })
     // TODO: Implement Sui transaction for minting
-    const response = await fetch(`${API_BASE}/mint`, {
+    const adapterResponse = await fetch(`${API_BASE}/adapters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to mint adapter');
-    return response.json();
+    if (!adapterResponse.ok) throw new Error('Failed to mint adapter');
+    const adapterRes = await adapterResponse.json();
+
+    const mintResponse = await fetch(`${API_BASE}/sui/mint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!mintResponse.ok) throw new Error('Failed to mint adapter');
+    const mintRes = await mintResponse.json();
+
+    console.log("Response", {
+      adapterRes,
+      mintRes
+    })
+
+    return {
+      txHash: mintRes.digest,
+      adapterId: adapterRes.id
+    }
   },
 };
 

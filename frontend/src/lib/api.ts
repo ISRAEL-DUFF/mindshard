@@ -123,6 +123,8 @@ export const uploadApi = {
     messageBytesBase64: string;
     uploaderAddress: string;
     manifest: AdapterManifest;
+    price?: number,
+    tags: string[]
   }): Promise<{ adapterId: string; txHash: string }> {
     const adapterPayload = {
       name: data.name,
@@ -141,6 +143,28 @@ export const uploadApi = {
       manifest: data.manifest,
       uploaderAddress: data.uploaderAddress
     };
+
+    const adapterPayl = {
+      name: data.name,
+      description: data.manifest.description,
+      version: data.manifest.version, // '1.0.0',
+      baseModel: data.manifest.base_models[0],
+      task: data.manifest.task,
+      language: data.manifest.language,
+      license: data.manifest.license,
+      creator: data.manifest.authors[0].name,
+      creatorAddress: data.uploaderAddress,
+      manifestHash: data.manifestHash,
+      walrusCID: data.walrusCID,
+      signature: data.signature,
+      downloads: 0,
+      purchases: 0,
+      verified: true,
+      price: data.price ?? 0,
+      isPrivate: data.price ? true : false,
+      tags: data.tags, // ['writing', 'creative', 'text'],
+      versions: [],
+    }
     console.log("PAYLOAD:", {
       data,
       adapterMintPayload,
@@ -150,7 +174,7 @@ export const uploadApi = {
     const adapterResponse = await fetch(`${API_BASE}/adapters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(adapterPayl),
     });
     if (!adapterResponse.ok) throw new Error('Failed to mint adapter');
     const adapterRes = await adapterResponse.json();
@@ -177,22 +201,25 @@ export const uploadApi = {
 
 // Adapter API
 export const adapterApi = {
+  async list(): Promise<Adapter[]> {
+    const response = await fetch(`${API_BASE}/adapters`);
+    if (!response.ok) throw new Error('Failed to fetch adapters');
+    return response.json();
+  },
+
   async search(filters: SearchFilters): Promise<Adapter[]> {
-    // TODO: Implement actual search with filters
     const params = new URLSearchParams();
     if (filters.query) params.append('q', filters.query);
     if (filters.baseModel) params.append('baseModel', filters.baseModel);
     if (filters.task) params.append('task', filters.task);
     if (filters.sortBy) params.append('sort', filters.sortBy);
-    
     const response = await fetch(`${API_BASE}/adapters?${params}`);
     if (!response.ok) throw new Error('Search failed');
     return response.json();
   },
 
   async getById(id: string): Promise<Adapter> {
-    // TODO: Implement actual API call
-    const response = await fetch(`${API_BASE}/adapter/${id}`);
+    const response = await fetch(`${API_BASE}/adapters/${id}`);
     if (!response.ok) throw new Error('Failed to fetch adapter');
     return response.json();
   },

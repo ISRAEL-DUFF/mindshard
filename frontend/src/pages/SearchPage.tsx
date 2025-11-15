@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { AdapterCard } from '@/components/AdapterCard';
@@ -7,176 +7,47 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Adapter } from '@/lib/types';
+import { adapterApi } from '@/lib/api';
 
-// Mock data - TODO: Replace with actual API calls
-const mockAdapters: Adapter[] = [
-  {
-    id: '1',
-    name: 'GPT-4 Style Adapter',
-    description: 'Fine-tuned adapter for GPT-like writing style with improved coherence',
-    version: '1.0.0',
-    baseModel: 'llama-2-7b',
-    task: 'text-generation',
-    language: 'en',
-    license: 'MIT',
-    creator: 'alice.sui',
-    creatorAddress: '0x123...',
-    manifestHash: '0xabc...',
-    walrusCID: 'walrus://xyz',
-    signature: '0xsig...',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-15',
-    downloads: 1234,
-    purchases: 45,
-    verified: true,
-    price: 10,
-    isPrivate: false,
-    tags: ['writing', 'creative', 'text'],
-    versions: [],
-  },
-  {
-    id: '2',
-    name: 'Code Completion Pro',
-    description: 'Specialized adapter for code generation and completion tasks',
-    version: '2.1.0',
-    baseModel: 'codellama-13b',
-    task: 'code-generation',
-    language: 'multi',
-    license: 'Apache-2.0',
-    creator: 'bob.dev',
-    creatorAddress: '0x456...',
-    manifestHash: '0xdef...',
-    walrusCID: 'walrus://abc',
-    signature: '0xsig2...',
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-10',
-    downloads: 2456,
-    purchases: 89,
-    verified: true,
-    price: 25,
-    isPrivate: false,
-    tags: ['code', 'programming'],
-    versions: [],
-  },
-  {
-    id: '3',
-    name: 'Image Caption Master',
-    description: 'High-quality image captioning and description generation',
-    version: '1.5.0',
-    baseModel: 'llava-7b',
-    task: 'image-to-text',
-    language: 'en',
-    license: 'MIT',
-    creator: 'carol.vision',
-    creatorAddress: '0x789...',
-    manifestHash: '0xghi...',
-    walrusCID: 'walrus://def',
-    signature: '0xsig3...',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-25',
-    downloads: 567,
-    purchases: 23,
-    verified: true,
-    price: 0,
-    isPrivate: false,
-    tags: ['image', 'vision', 'captioning'],
-    versions: [],
-  },
-  {
-    id: '4',
-    name: 'Premium Writing Assistant',
-    description: 'Professional writing enhancement with style transfer capabilities',
-    version: '3.0.0',
-    baseModel: 'llama-2-13b',
-    task: 'text-generation',
-    language: 'en',
-    license: 'Commercial',
-    creator: 'alice.sui',
-    creatorAddress: '0x123...',
-    manifestHash: '0xjkl...',
-    walrusCID: 'walrus://ghi',
-    signature: '0xsig4...',
-    createdAt: '2024-02-15',
-    updatedAt: '2024-02-15',
-    downloads: 89,
-    purchases: 12,
-    verified: false,
-    price: 50,
-    isPrivate: false,
-    tags: ['writing', 'premium', 'text'],
-    versions: [],
-  },
-  {
-    id: '5',
-    name: 'Free Sentiment Analyzer',
-    description: 'Open-source sentiment analysis adapter for text classification',
-    version: '1.0.0',
-    baseModel: 'bert-base',
-    task: 'text-classification',
-    language: 'en',
-    license: 'MIT',
-    creator: 'dave.ml',
-    creatorAddress: '0xabc...',
-    manifestHash: '0xmno...',
-    walrusCID: 'walrus://jkl',
-    signature: '0xsig5...',
-    createdAt: '2024-01-05',
-    updatedAt: '2024-01-05',
-    downloads: 3421,
-    purchases: 0,
-    verified: true,
-    price: 0,
-    isPrivate: false,
-    tags: ['text', 'classification', 'free'],
-    versions: [],
-  },
-  {
-    id: '6',
-    name: 'Image Generation LoRA',
-    description: 'Fine-tuned adapter for stable diffusion image generation',
-    version: '2.0.0',
-    baseModel: 'stable-diffusion-xl',
-    task: 'text-to-image',
-    language: 'en',
-    license: 'CreativeML',
-    creator: 'eve.artist',
-    creatorAddress: '0xdef...',
-    manifestHash: '0xpqr...',
-    walrusCID: 'walrus://mno',
-    signature: '0xsig6...',
-    createdAt: '2024-02-20',
-    updatedAt: '2024-02-22',
-    downloads: 1876,
-    purchases: 156,
-    verified: true,
-    price: 15,
-    isPrivate: false,
-    tags: ['image', 'generation', 'art'],
-    versions: [],
-  },
-];
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('popular');
+  const [adapters, setAdapters] = useState<Adapter[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Filter and sort adapters
+  // Map selectedTags to backend filters (only those that are not handled by backend are filtered client-side)
+  const backendFilters = useMemo(() => {
+    let filters: any = { query: searchQuery, sortBy };
+    // Only pass baseModel and task if a single tag is selected and it matches a known filter
+    selectedTags.forEach(tag => {
+      switch (tag.toLowerCase()) {
+        case 'text':
+          filters.task = 'text-generation';
+          break;
+        case 'image':
+          filters.task = 'image-to-text'; // or 'text-to-image' depending on your backend
+          break;
+        case 'code':
+          filters.task = 'code-generation';
+          break;
+        // 'verified', 'free', 'premium' are handled client-side below
+      }
+    });
+    return filters;
+  }, [searchQuery, sortBy, selectedTags]);
+
+  useEffect(() => {
+    setLoading(true);
+    adapterApi.search(backendFilters)
+      .then(setAdapters)
+      .finally(() => setLoading(false));
+  }, [backendFilters]);
+
+  // Client-side filter for tags not handled by backend
   const filteredAdapters = useMemo(() => {
-    let filtered = [...mockAdapters];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(adapter =>
-        adapter.name.toLowerCase().includes(query) ||
-        adapter.creator.toLowerCase().includes(query) ||
-        adapter.baseModel.toLowerCase().includes(query) ||
-        adapter.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Tag filters
+    let filtered = [...adapters];
     if (selectedTags.length > 0) {
       filtered = filtered.filter(adapter => {
         return selectedTags.every(tag => {
@@ -188,36 +59,19 @@ export default function SearchPage() {
             case 'premium':
               return adapter.price && adapter.price > 0;
             case 'text':
-              return adapter.task.includes('text') || adapter.tags.includes('text');
+              return adapter.task?.includes('text') || adapter.tags?.includes('text');
             case 'image':
-              return adapter.task.includes('image') || adapter.tags.includes('image');
+              return adapter.task?.includes('image') || adapter.tags?.includes('image');
             case 'code':
-              return adapter.task.includes('code') || adapter.tags.includes('code');
+              return adapter.task?.includes('code') || adapter.tags?.includes('code');
             default:
               return true;
           }
         });
       });
     }
-
-    // Sort
-    switch (sortBy) {
-      case 'popular':
-        filtered.sort((a, b) => (b.downloads + b.purchases * 10) - (a.downloads + a.purchases * 10));
-        break;
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      case 'price-low':
-        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-    }
-
     return filtered;
-  }, [searchQuery, selectedTags, sortBy]);
+  }, [adapters, selectedTags]);
 
   return (
     <div className="min-h-screen bg-background">

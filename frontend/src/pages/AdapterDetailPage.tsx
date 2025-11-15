@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Download, Shield, GitFork, DollarSign, ExternalLink, CheckCircle2, AlertCircle, Heart, Upload } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
@@ -12,6 +12,7 @@ import { PurchaseModal } from '@/components/PurchaseModal';
 import { VersionDiff } from '@/components/VersionDiff';
 import { NewVersionModal } from '@/components/NewVersionModal';
 import { walletManager } from '@/lib/wallet';
+import { adapterApi } from '@/lib/api';
 
 export default function AdapterDetailPage() {
   const { id } = useParams();
@@ -24,35 +25,23 @@ export default function AdapterDetailPage() {
   const [newVersionModalOpen, setNewVersionModalOpen] = useState(false);
   const [compareVersions, setCompareVersions] = useState<{ old: any; new: any } | null>(null);
 
-  // Mock data - TODO: Fetch from API
-  const adapter = {
-    id: id || '1',
-    name: 'GPT-4 Style Adapter',
-    description: 'Fine-tuned adapter for GPT-like writing style with improved coherence and creativity. This adapter has been trained on high-quality writing samples and optimized for natural language generation tasks.',
-    version: '1.0.0',
-    baseModel: 'llama-2-7b',
-    task: 'text-generation',
-    language: 'en',
-    license: 'MIT',
-    creator: 'alice.sui',
-    creatorAddress: '0x1234567890abcdef1234567890abcdef12345678',
-    manifestHash: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
-    walrusCID: 'walrus://xyz123abc456def789',
-    signature: '0xsignature...',
-    createdAt: '2024-01-15',
-    downloads: 1234,
-    purchases: 45,
-    price: 10,
-    verified: true,
-    tags: ['writing', 'creative', 'gpt-style'],
-    versions: [
-      { version: '1.0.0', walrusCID: 'walrus://xyz123abc456def789', manifestHash: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890', createdAt: '2024-01-15', baseModel: 'llama-2-7b', task: 'text-generation', license: 'MIT' },
-      { version: '0.9.0', walrusCID: 'walrus://abc789def456ghi123', manifestHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef', createdAt: '2024-01-10', baseModel: 'llama-2-7b', task: 'text-generation', license: 'MIT' },
-    ],
-  };
+
+  const [adapter, setAdapter] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    adapterApi.getById(id)
+      .then(setAdapter)
+      .catch((err) => setError(err.message || 'Failed to load adapter'))
+      .finally(() => setLoading(false));
+  }, [id]);
   
   const walletState = walletManager.getState();
-  const isCreator = walletState.connected && walletState.address === adapter.creatorAddress;
+  const isCreator = adapter && walletState.connected && walletState.address === adapter.creatorAddress;
 
   const handleVerify = async () => {
     setVerifying(true);
@@ -98,6 +87,22 @@ export default function AdapterDetailPage() {
     setNewVersionModalOpen(true);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <span className="text-lg text-muted-foreground">Loading adapter...</span>
+      </div>
+    );
+  }
+
+  if (error || !adapter) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <span className="text-lg text-destructive">{error || 'Adapter not found.'}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -135,7 +140,7 @@ export default function AdapterDetailPage() {
                 <Badge variant="outline">{adapter.task}</Badge>
                 <Badge variant="outline">{adapter.language}</Badge>
                 <Badge variant="outline">{adapter.license}</Badge>
-                {adapter.tags.map(tag => (
+                {adapter.tags && adapter.tags.map((tag: string) => (
                   <Badge key={tag} variant="outline">{tag}</Badge>
                 ))}
               </div>
@@ -162,7 +167,7 @@ export default function AdapterDetailPage() {
                       <div>
                         <p className="font-medium">Manifest Hash</p>
                         <p className="text-sm text-muted-foreground font-mono">
-                          {adapter.manifestHash.substring(0, 20)}...
+                          {adapter.manifestHash?.substring(0, 20)}...
                         </p>
                       </div>
                       <Button
@@ -209,7 +214,7 @@ export default function AdapterDetailPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Walrus CID</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{adapter.walrusCID.substring(0, 20)}...</span>
+                        <span className="font-mono text-sm">{adapter.walrusCID?.substring(0, 20)}...</span>
                         <Button variant="ghost" size="sm">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
@@ -246,7 +251,7 @@ export default function AdapterDetailPage() {
                   </div>
                 ) : (
                   <>
-                    {adapter.versions.map((version, idx) => (
+                    {adapter.versions && adapter.versions.map((version: any, idx: number) => (
                       <Card key={version.version} className="glass-panel">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
@@ -257,7 +262,7 @@ export default function AdapterDetailPage() {
                               </div>
                               <p className="text-sm text-muted-foreground">{version.createdAt}</p>
                               <p className="text-xs font-mono text-muted-foreground mt-1">
-                                CID: {version.walrusCID.substring(0, 30)}...
+                                CID: {version.walrusCID?.substring(0, 30)}...
                               </p>
                             </div>
                             <div className="flex gap-2">

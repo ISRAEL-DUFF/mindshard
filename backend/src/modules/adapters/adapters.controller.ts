@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query } from '@nestjs/common';
 import { AdaptersService } from './adapters.service';
 import { CreateAdapterDto } from './dto/create-adapter.dto';
 
@@ -9,6 +9,22 @@ export class AdaptersController {
   @Post()
   async create(@Body() dto: CreateAdapterDto) {
     return this.service.create(dto);
+  }
+
+  @Get()
+  async list(
+    @Query('q') q?: string,
+    @Query('baseModel') baseModel?: string,
+    @Query('task') task?: string,
+    @Query('sort') sort?: string
+  ) {
+    console.log('fetching data:', {
+      q,
+      baseModel,
+      task,
+      sort
+    })
+    return this.service.findWithFilters({ q, baseModel, task, sort });
   }
 
   @Get(':id')

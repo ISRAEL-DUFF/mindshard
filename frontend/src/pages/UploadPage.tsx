@@ -51,6 +51,7 @@ export default function UploadPage() {
     license: 'MIT',
     isPrivate: false,
     price: 0,
+    tags: []
   });
   const { toast } = useToast();
 
@@ -103,6 +104,7 @@ export default function UploadPage() {
         license: parent.license,
         isPrivate: false,
         price: 0,
+        tags: []
       });
       toast({
         title: 'Fork initialized',
@@ -110,73 +112,6 @@ export default function UploadPage() {
       });
     }
   }, [location.state]);
-
-
-
-
-
-
-
-
-  // Step 1: Create and encode the flow (can be done immediately when file is selected)
-  async function handleEncode(params: {
-    identifier: string;
-    fileData: ArrayBuffer
-  }) {
-  
-    const flow = client.walrus.writeFilesFlow({
-    files: [
-        WalrusFile.from({
-          // contents: new Blob([new Uint8Array([1,2,3,4,5])], { type: 'application/octet-stream' }),
-          contents: new Blob([params.fileData]),
-          identifier: params.identifier // 'my-file.txt',
-        }),
-      ],
-    });
-
-    await flow.encode();
-    setWalrusFlow(flow);
-  }
-
-  // Step 2: Register the blob (triggered by user clicking a register button after the encode step)
-  async function handleRegister() {
-    const registerTx = walrusFlow.register({
-      epochs: 3,
-      owner: currentAccount.address,
-      deletable: true,
-    });
-    const { digest } = await signAndExecuteTransaction({ transaction: registerTx });
-    // Step 3: Upload the data to storage nodes
-    // This can be done immediately after the register step, or as a separate step the user initiates
-    const resp = await walrusFlow.upload({ digest });
-    console.log("File Uploaded Response:", resp)
-
-    return resp;
-  }
-
-  // Step 4: Certify the blob (triggered by user clicking a certify button after the blob is uploaded)
-  async function handleCertify() {
-    const certifyTx = walrusFlow.certify();
-
-    await signAndExecuteTransaction({ transaction: certifyTx });
-
-    // Step 5: Get the new files
-    const files = await walrusFlow.listFiles();
-    console.log('Uploaded files', files);
-  }
-
-  async function handleAllSignAndUpload() {
-    const resp = await handleRegister();
-    const files = await handleCertify();
-
-    return {
-      walrusCID: 'Test-CID',
-      uploadOutput: resp,
-      files
-    }
-  }
-
-
 
 
   // Handle file selection and validation
@@ -212,6 +147,7 @@ export default function UploadPage() {
           license: validation.manifest.license || 'MIT',
           isPrivate: false,
           price: 0,
+          tags: [],
         });
       }
 
@@ -434,6 +370,8 @@ export default function UploadPage() {
         uploaderAddress: currentAccount.address,
         messageBytesBase64: signResponse.txBytes,
         manifest,
+        tags: formData.tags,
+        price: formData.price
       });
       
       setProgress({ stage: 'minting', progress: 95, message: 'Transaction submitted to blockchain...' });
@@ -567,6 +505,24 @@ export default function UploadPage() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="tags">Tags (comma separated)</Label>
+                  <Input
+                    id="tags"
+                    placeholder="e.g. writing, creative, text"
+                    value={formData.tags.join(', ')}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        tags: e.target.value
+                          .split(',')
+                          .map(tag => tag.trim())
+                          .filter(tag => tag.length > 0),
+                      })
+                    }
+                  />
+                </div>
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between glass-panel p-4 rounded-lg">
                     <div>
@@ -651,7 +607,7 @@ export default function UploadPage() {
                     <div className="flex items-center gap-2 mt-1">
                       <p className="font-mono text-sm break-all flex-1">{txResult.txHash}</p>
                       <a
-                        href={`https://suiexplorer.com/txblock/${txResult.txHash}`}
+                        href={`https://suiscan.xyz/testnet/tx/${txResult.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline flex items-center gap-1 shrink-0"

@@ -114,7 +114,7 @@ export class WalrusController {
       name: manifest.name || 'untitled',
       walrusCID: cid,
       manifestHash: manifest_hash,
-      uploaderAddress: uploader_address,
+      creatorAddress: uploader_address,
       license: license || manifest.license || 'unknown'
     });
 
